@@ -1,0 +1,22 @@
+{
+  "name": "backendless_schema_diff",
+  "version": "1.0.0",
+  "description": "Compare selected applications database schema, and provide details",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loudbinary/backendless_schema_diff.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/loudbinary/backendless_schema_diff/issues"
+  },
+  "homepage": "https://github.com/loudbinary/backendless_schema_diff#readme",
+  "dependencies": {
+    "request": "^2.81.0"
+  }
+}
