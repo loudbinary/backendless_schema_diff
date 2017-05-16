@@ -19,7 +19,7 @@
     "dotenv": "^4.0.0",
     "json-2-csv": "^2.1.1",
     "jsonexport": "^1.5.2",
-    "request": "^2.81.0"
+    "request": "^2.81.0",
     "jsonexport": "^1.5.2"
-  t}
+  }
 }

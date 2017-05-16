@@ -9,7 +9,7 @@ const _reportingDirectory=__dirname.toString();
 const chalk = require('chalk');
 const getUsage = require('command-line-usage');
 const commandLineArgs = require('command-line-args');
-const header = require('../assets/ansi-header.js');
+const header = require('./assets/ansi-header.js');
 const ansi = require('ansi-escape-sequences');
 const async = require('async');
 const path = require('path')
@@ -592,13 +592,14 @@ function processCli() {
                 }
             ], function(err){
                 if (err){
-                    console.log(err);
+                    throw new Error(err);
                 } else {
                     console.log(chalk.yellow('Completed processing and comparing'))
                     console.log(chalk.yellow('Saving issues report...', path.join(__dirname,'issues_report.log')));
                     writeReport(function(err){
                         if (err)callback(err);
                         console.log(chalk.yellow('Processing Completed, and report is saved'));
+                        process.exit(0);
                     });
 
                 }
