@@ -45,20 +45,20 @@ function createApiHttpAgent(username, password) {
         json: true
     };
     const req = http.request(options, (res) => {
-            console.log(`STATUS: ${res.statusCode}`);
-    console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-    res.setEncoding('utf8');
-    res.on('data', (chunk) => {
-        console.log(`BODY: ${chunk}`);
-});
-    res.on('end', () => {
-        console.log('No more data in response.');
-});
-});
+        console.log(`STATUS: ${res.statusCode}`);
+        console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+            console.log(`BODY: ${chunk}`);
+        });
+        res.on('end', () => {
+            console.log('No more data in response.');
+        });
+    });
 
     req.on('error', (e) => {
         console.error(`problem with request: ${e.message}`);
-});
+    });
 
     req.write(JSON.stringify(postData));
     req.end();
@@ -485,7 +485,7 @@ function processCli() {
 
                                         }
                                         else {
-                                            let msg = 'FIELD_MISSING.....Column ' + currentColumn.appName + ' is missing from ' + _application2.appName;
+                                            let msg = 'FIELD_MISSING.....Column ' + currentColumn.name + ' is missing from ' + _application2.appName + ' for table ' + currentTable['name'];
                                             report.push(msg);
                                             console.log(chalk.red(msg));
                                         }
@@ -528,13 +528,27 @@ function processCli() {
                                 function(callback){
                                     console.log(chalk.blue('Verifying Parent Relations of table ' + currentTable['name']));
                                     if (table1.parentRelations){
-                                        let missingParentRelations = table2.parentRelations.filter(function(missingParentRelation){
-                                            table1.parentRelations.filter(function(nested){
-                                                if (nested.name != missingParentRelation.name){
+                                        let missingParentRelations;
+                                        if (table2.parentRelations) {
+                                            missingParentRelations = table2.parentRelations.filter(function(missingParentRelation){
+                                                table1.parentRelations.filter(function(nested){
+                                                    if (nested.name != missingParentRelation.name){
+                                                        return missingParentRelation;
+                                                    }
+                                                })
+                                            })
+                                        } else {
+                                            missingParentRelations = table1.parentRelations.filter(function(nested){
+                                                [].filter(function(missingParentRelation){
                                                     return missingParentRelation;
+                                                })
+                                                if (nested.name != missingParentRelation.name){
+
                                                 }
                                             })
-                                        })
+
+                                        }
+
                                         table1.parentRelations.forEach(function(parentRelation){
 
 
@@ -542,7 +556,7 @@ function processCli() {
                                                 console.log(chalk.green('.....Parent Relation names match between applications'))
                                             } else {
                                                 missingParentRelations.forEach(function(newItem2){
-                                                    let msg = 'MISMATCHING.....' + _application1.appName + ' Parent Relations from ' + parentRelation['name'] + ' to table ' + parentRelation['relatedColumnName'];
+                                                    let msg = 'MISMATCHING.....' + _application1.appName + ' Parent Relations from ' + parentRelation['name'] + ' to table ' + parentRelation['relatedColumnName'] + ' for table named:' + currentTable['name'];
                                                     report.push(msg)
                                                     console.log(chalk.red(msg));
                                                 })
