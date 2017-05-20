@@ -1,123 +1,74 @@
 require('dotenv').config();
-const _application_id = process.env._application_id;
-const _secret_key = process.env._secret_key;
-const _application_type=process.env._application_type;
-const _login= process.env._login;
-const _password= process.env._password;
-const _appName=process.env._appName;
-const _reportingDirectory=__dirname.toString();
-const chalk = require('chalk');
-const getUsage = require('command-line-usage');
-const commandLineArgs = require('command-line-args');
-const header = require('./assets/ansi-header.js');
-const ansi = require('ansi-escape-sequences');
-const async = require('async');
-const path = require('path')
-const pathToModule = path.join(__dirname,'backendless_admin_api.js');
-const backendless_admin_api = require(pathToModule);
-const Backendless_admin_api = new backendless_admin_api;
-let applications = [];
-let _application1;
-let _application2;
-const jsonexport = require('jsonexport');
-const fs = require('fs');
-let report = [];
 
-const http = require('http');
+const _reportingDirectory=__dirname.toString(),
+      chalk = require('chalk'),
+      getUsage = require('command-line-usage'),
+      commandLineArgs = require('command-line-args'),
+      header = require('./assets/ansi-header.js'),
+      ansi = require('ansi-escape-sequences'),
+      async = require('async'),
+      path = require('path'),
+      pathToModule = path.join(__dirname,'backendless_admin_api.js'),
+      backendless_admin_api = require(pathToModule),
+      Backendless_admin_api = new backendless_admin_api,
+      jsonexport = require('jsonexport'),
+      fs = require('fs'),
+      http = require('http'),
+      headerOnlySection = [
+        {
+            content: ansi.format(header,'gold'),
+            raw: true
+        },
+        {
+            header: 'Backendless helper utility',
+            group: ['header','_none'],
+            content: 'By: Charles Russell (charles.russell@webteks.com)'
+        }
+      ], // Console Applications help header
+      sections = [
+        {
+            content: ansi.format(header,'gold'),
+            raw: true
+        },
+        {
+            header: 'Backendless helper utility',
+            group: ['header','_none'],
+            content: 'By: Charles Russell (charles.russell@webteks.com)'
+        },
+        {
+            header: 'Compare database schema of two Backendless Applications',
+            group: ['compare','_none'],
+            optionList: [
+                {
+                    name: 'username',
+                    typeLabel: '[underline]{\[\'Backendless Developer Username\'\]}'
+                },
+                {
+                    name: 'password',
+                    typeLabel: '[underline]{\[\'Backendless Developer Password\'\]}'
+                },
+                {
+                    name: 'application-name1',
+                    typeLabel: '[underline]{\[\'Backendless Application Name 1 (Source) \'\]}'
+                },
+                {
+                    name: 'application-name2',
+                    typeLabel: '[underline]{\[\'Backendless Application Name 2 (Comparison)\'\]}'
+                },
+                {
+                    name: 'report-directory',
+                    typeLabel: '[underline]{\[\'Schema reporting directory\'\]}'
+                }
+            ]
+        }
+      ]; // Console Applications help information
 
-const httpAgents = []; //Holds open logged in Backendless sessions, default cached 1 hours, so we do not hit login limit
+let applications = [],
+    _application1,
+     _application2,
+     report = [];
 
-function createApiHttpAgent(username, password) {
-    var agent = new keepAliveAgent({ maxSockets: 100 }); // Optionally define more parallel sockets
-    var postData = { login: _login,
-        password: _password }
-    var options = {
-        agent: agent,
-        keepAliveMsecs: 36000,
-        method: 'POST',
-        host: 'develop.backendless.com',
-        path: '/console/home/login',
-        headers:
-            {   'application-type': 'REST',
-                'secret-key': _secret_key,
-                'application-id': _application_id,
-                'content-type': 'application/json' },
-        json: true
-    };
-    const req = http.request(options, (res) => {
-        console.log(`STATUS: ${res.statusCode}`);
-        console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => {
-            console.log(`BODY: ${chunk}`);
-        });
-        res.on('end', () => {
-            console.log('No more data in response.');
-        });
-    });
 
-    req.on('error', (e) => {
-        console.error(`problem with request: ${e.message}`);
-    });
-
-    req.write(JSON.stringify(postData));
-    req.end();
-
-}
-
-const headerOnlySection = [
-    {
-        content: ansi.format(header,'gold'),
-        raw: true
-    },
-    {
-        header: 'Backendless helper utility',
-        group: ['header','_none'],
-        content: 'By: Charles Russell (charles.russell@webteks.com)'
-    }
-]
-
-/**
- * This is the help screen, default usage.
- * @type {*[]}
- */
-const sections = [
-    {
-        content: ansi.format(header,'gold'),
-        raw: true
-    },
-    {
-        header: 'Backendless helper utility',
-        group: ['header','_none'],
-        content: 'By: Charles Russell (charles.russell@webteks.com)'
-    },
-    {
-        header: 'Compare database schema of two Backendless Applications',
-        group: ['compare','_none'],
-        optionList: [
-            {
-                name: 'username',
-                typeLabel: '[underline]{\[\'Backendless Developer Username\'\]}'
-            },
-            {
-                name: 'password',
-                typeLabel: '[underline]{\[\'Backendless Developer Password\'\]}'
-            },
-            {
-                name: 'application-name1',
-                typeLabel: '[underline]{\[\'Backendless Application Name 1 (Source) \'\]}'
-            },
-            {
-                name: 'application-name2',
-                typeLabel: '[underline]{\[\'Backendless Application Name 2 (Comparison)\'\]}'
-            },
-            {
-                name: 'report-directory',
-                typeLabel: '[underline]{\[\'Schema reporting directory\'\]}'
-            }
-        ]
-    }
-];
 
 /*
  ,{
@@ -127,6 +78,9 @@ const sections = [
  */
 const usage = getUsage(sections);
 
+/*
+Definition for this applications arguments passed to command line.
+ */
 const optionDefinitions = [
     { name: 'compare', alias: 'c',type: Boolean ,group: 'compare' },
     { name: 'application-name1', alias: 'a', type: String, group: 'compare'},
@@ -144,21 +98,27 @@ if (JSON.stringify(options).length === 24) {
     process.exit(0);
 }
 
+/*
+Clean up any files that may have been saved from the last execution of application
+ * application1_tables.csv
+ * application2_tables.csv
+ * issues_report.log
+ */
 function cleanUp(callback) {
     async.series([
-        function(callback){
+        (callback)=>{
             fs.unlink(path.join(__dirname,'application1_tables.csv'),function(err){
                 console.log(chalk.yellow('Deleted application1_tables.csv'));
                 callback(null);
             })
         },
-        function(callback){
+        (callback)=>{
             fs.unlink(path.join(__dirname,'application2_tables.csv'),function(err){
                 console.log(chalk.yellow('Deleted application2_tables.csv'));
                 callback(null);
             })
         },
-        function(callback){
+        (callback)=>{
             fs.unlink(path.join(__dirname,'issues_report.log'),function(err){
                 console.log(chalk.yellow('Deleted issues_report.log'));
                 callback(null);
@@ -168,6 +128,10 @@ function cleanUp(callback) {
         callback(null);
     })
 }
+
+/*
+Helper to check for existence of an argument provided to application at execution.
+ */
 function ifExists(argument){
     if (options.compare[argument].toString().length > 0) {
         return true.toString();
@@ -176,6 +140,9 @@ function ifExists(argument){
     }
 }
 
+/*
+Check arguments provided to application, and take appropriate actions.
+ */
 function checkForArguments(allOptions) {
     console.log(chalk.bgYellow.red('Executing Backendless Database Schema comparison tool...'));
 
@@ -214,6 +181,9 @@ function checkForArguments(allOptions) {
     }
 }
 
+/*
+Given all applications from Backendless, locate the two requested applications given as arguments for comparisions
+ */
 function findApplicationsInList(applications,callback) {
     for(var x = 0; x < applications.length; x++){
         if (applications[x].appName == options.compare['application-name1']){
@@ -231,35 +201,42 @@ function findApplicationsInList(applications,callback) {
 
 }
 
-function getVersionId(applicationId,callback) {
-
-}
+/*
+Applications' main processing loop.
+ */
 function processCli() {
-    console.log(getUsage(headerOnlySection))
+    console.log(getUsage(headerOnlySection));
+
     cleanUp(function(){
         if (options.compare){
             checkForArguments(options.compare);
             console.log(chalk.white('.....Logging into Backendless developer api'))
             // Login to the developer api with supplied information.
             async.series([
-                function(callback){
-                    Backendless_admin_api.login(options.compare['username'],options.compare['password'],function(err){
+                /*
+                    1) Login to Backendless with provided develop login
+                    2) Querying Backendless for all applications available to logged in developer
+                    3) Find both application 1 and application 2, provided as arguments, in the returned Backendless list.
+                    4) Assign critical variables for further processing.
+                 */
+                (callback)=>{
+                    Backendless_admin_api.login(options.compare['username'],options.compare['password'],(err)=>{
                         if (!err){
                             console.log(chalk.white('.....Logged in, listing applications and verifying provided application ids'));
                         }
                         // Get all application from developer api, so as to verify supplied application-id's
-                        Backendless_admin_api.listApplications(function(err,results){
+                        Backendless_admin_api.listApplications((err,results)=>{
                             if (!err) {
                                 console.log(chalk.white('.....Returned',results.length, 'applications'));
                             }
                             if (err) {
                                 console.log(err);
                             }
-                            results.forEach(function(item){
+                            results.forEach((item)=>{
                                 applications.push(item);
 
                             })
-                            findApplicationsInList(applications,function(err){
+                            findApplicationsInList(applications,(err)=>{
                                 if (err) callback(err)
                                 if (!_application1 || !_application2) {
                                     console.log(chalk.red('Unable to locate application names provided as arguments in list'));
@@ -272,25 +249,34 @@ function processCli() {
                         });
                     })
                 },
-                function(callback){
-                    Backendless_admin_api.getVersionId(_application1.appId,function(err,results){
+                /*
+                    Obtain version Id of Application 1, necessary to complete remaining queries.
+                 */
+                (callback)=>{
+                    Backendless_admin_api.getVersionId(_application1.appId,(err,results)=>{
                         if (err) callback(err);
                         if (!results) callback (err)
                         _application1.currentVersionId = results.currentVersionId;
                         callback(null);
                     })
                 },
-                function(callback){
-                    Backendless_admin_api.getVersionId(_application2.appId,function(err,results){
+                /*
+                    Obtain version Id of Application 2, necessary to complete remaining queries.
+                 */
+                (callback)=>{
+                    Backendless_admin_api.getVersionId(_application2.appId,(err,results)=>{
                         if (err) callback(err);
                         if (!results) callback (err)
                         _application2.currentVersionId = results.currentVersionId;
                         callback(null);
                     })
                 },
-                function(callback){
+                /*
+                    Obtain REST Secret Key for Application 1, necessary to complete remaining queries.
+                 */
+                (callback)=>{
                     console.log(chalk.yellow('Getting REST Secret for application', _application1.appName));
-                    Backendless_admin_api.getRestSecret(_application1.appId,function(err,results){
+                    Backendless_admin_api.getRestSecret(_application1.appId,(err,results)=>{
                         if (err){
                             callback(err);
                         } else {
@@ -300,9 +286,12 @@ function processCli() {
                         }
                     })
                 },
-                function(callback){
+                /*
+                    Obtain REST Secret Key for Application 2, necessary to complete remaining queries.
+                 */
+                (callback)=>{
                     console.log(chalk.yellow('Getting REST Secret for application2', _application2.appName));
-                    Backendless_admin_api.getRestSecret(_application2.appId,function(err,results){
+                    Backendless_admin_api.getRestSecret(_application2.appId,(err,results)=>{
                         if (err){
                             callback(err);
                         } else {
@@ -312,9 +301,12 @@ function processCli() {
                         }
                     })
                 },
-                function(callback){
+                /*
+                    Query Backendless for all database tables for Application 1
+                 */
+                (callback)=>{
                     console.log(chalk.yellow('Getting all datatables for', _application1.appName));
-                    Backendless_admin_api.getApplicationsTables(_application1.appId, _application1.currentVersionId, _application1.secretKey,function(err,results){
+                    Backendless_admin_api.getApplicationsTables(_application1.appId, _application1.currentVersionId, _application1.secretKey,(err,results)=>{
                         if (err){
                             callback(err)
                         } else {
@@ -323,9 +315,12 @@ function processCli() {
                         }
                     })
                 },
-                function(callback){
+                /*
+                    Query Backendless for all database tables for Application 2
+                 */
+                (callback)=>{
                     console.log(chalk.yellow('Getting all datatables for', _application2.appName));
-                    Backendless_admin_api.getApplicationsTables(_application2.appId, _application2.currentVersionId,_application2.secretKey,function(err,results){
+                    Backendless_admin_api.getApplicationsTables(_application2.appId, _application2.currentVersionId,_application2.secretKey,(err,results)=>{
                         if (err){
                             callback(err)
                         } else {
@@ -335,35 +330,13 @@ function processCli() {
                     })
                 },
                 /*
-                 function(callback){
-                 //Need...to sort table names object, alphabetically before performing replace.
-                 callback(null);
-                 },
-                 function (callback){
-                 //Need...to replace all related table guids with table names.
-                 },
+                    Simple comparison of table names and each tables columns for differences between Application 1 and Application 2
                  */
-                function(callback) {
-                    console.log(chalk.yellow('Exporting table information to csv file for each application1'));
-                    jsonexport(_application1.tables.tables,function(err,csv){
-                        fs.writeFileSync(path.join(_reportingDirectory,'application1_tables.csv'),csv,'utf8');
-                        console.log(chalk.blue('Successfully wrote application1_tables.csv'));
-                        callback(null);
-                    })
-                },
-                function(callback) {
-                    console.log(chalk.yellow('Exporting table information to csv file for each application2'));
-                    jsonexport(_application2.tables.tables,function(err,csv){
-                        fs.writeFileSync(path.join(_reportingDirectory,'application2_tables.csv'),csv,'utf8');
-                        console.log(chalk.blue('Successfully wrote application2_tables.csv'));
-                        callback(null);
-                    })
-                },
-                function(callback){
+                (callback)=>{
                     console.log(chalk.yellow('Comparing table names and their fields between applications.'));
-                    _application1.tables.tables.forEach(function(item){
+                    _application1.tables.tables.forEach((item)=>{
                         console.log(chalk.white('.....Comparing ' + item.name + ' table name between applications '));
-                        let table2Name = _application2.tables.tables.filter(function(newItem){
+                        let table2Name = _application2.tables.tables.filter((newItem)=>{
                             if (item.name == newItem.name) {
                                 return newItem;
                             }
@@ -384,11 +357,14 @@ function processCli() {
                     })
                     callback(null);
                 },
-                function(callback){
+                /*
+                    Details comparison of table names, tables columns, and tables relationships between Application 1 and Application 2
+                 */
+                (callback)=>{
                     console.log(chalk.yellow('Comparing ' + _application1.appName + ' to ' + _application2.appName));
-                    _application1.tables.tables.forEach(function(currentTable){
+                    _application1.tables.tables.forEach((currentTable)=>{
                         console.log(chalk.white('.....Verifying column details for ' + currentTable.name));
-                        let _table2 = _application2.tables.tables.filter(function(filtered){
+                        let _table2 = _application2.tables.tables.filter((filtered)=>{
                             if (currentTable.name == filtered.name) {
                                 return filtered;
                             }
@@ -398,9 +374,9 @@ function processCli() {
                             let table2 = _table2[0];
                             async.series([
                                 function(callback){
-                                    table1.columns.forEach(function(currentColumn){
+                                    table1.columns.forEach((currentColumn)=>{
                                         console.log(chalk.blue('Verifying ' + currentTable['name'] + ' column: ' +currentColumn['name']));
-                                        let _table2Column= table2.columns.filter(function(filtered){
+                                        let _table2Column= table2.columns.filter((filtered)=>{
                                             if (currentColumn.name == filtered.name) {
                                                 return filtered;
                                             }
@@ -495,19 +471,19 @@ function processCli() {
                                 function(callback){
                                     console.log(chalk.blue('Verifying Relations of table ' + currentTable['name']));
                                     if (table1.relations) {
-                                        let missingRelations = table2.relations.filter(function(missingRelation){
-                                            table1.relations.filter(function(nested){
+                                        let missingRelations = table2.relations.filter((missingRelation)=>{
+                                            table1.relations.filter((nested)=>{
                                                 if (nested.name != missingRelation.name){
                                                     return missingRelation;
                                                 }
                                             })
                                         })
-                                        table1.relations.forEach(function(relation){
+                                        table1.relations.forEach((relation)=>{
                                             if (missingRelations.length == 0) {
                                                 console.log(chalk.green('.....Relation tables names match between applications'))
                                             } else {
-                                                missingRelations.forEach(function(missing){
-                                                    var _relatedTable = _application1.tables.tables.filter(function(_item){
+                                                missingRelations.forEach((missing)=>{
+                                                    var _relatedTable = _application1.tables.tables.filter((_item)=>{
                                                         if(relation.relatedTable == _item.tableId) {
                                                             return _item;
                                                         }
@@ -529,33 +505,23 @@ function processCli() {
                                     console.log(chalk.blue('Verifying Parent Relations of table ' + currentTable['name']));
                                     if (table1.parentRelations){
                                         let missingParentRelations;
+                                        if (!table2.parentRelations){
+                                            table2.parentRelations = [];
+                                        }
                                         if (table2.parentRelations) {
-                                            missingParentRelations = table2.parentRelations.filter(function(missingParentRelation){
-                                                table1.parentRelations.filter(function(nested){
+                                            missingParentRelations = table2.parentRelations.filter((missingParentRelation)=>{
+                                                table1.parentRelations.filter((nested)=>{
                                                     if (nested.name != missingParentRelation.name){
                                                         return missingParentRelation;
                                                     }
                                                 })
                                             })
-                                        } else {
-                                            missingParentRelations = table1.parentRelations.filter(function(nested){
-                                                [].filter(function(missingParentRelation){
-                                                    return missingParentRelation;
-                                                })
-                                                if (nested.name != missingParentRelation.name){
-
-                                                }
-                                            })
-
                                         }
-
-                                        table1.parentRelations.forEach(function(parentRelation){
-
-
+                                        table1.parentRelations.forEach((parentRelation)=>{
                                             if (missingParentRelations.length == 0) {
                                                 console.log(chalk.green('.....Parent Relation names match between applications'))
                                             } else {
-                                                missingParentRelations.forEach(function(newItem2){
+                                                missingParentRelations.forEach((newItem2)=>{
                                                     let msg = 'MISMATCHING.....' + _application1.appName + ' Parent Relations from ' + parentRelation['name'] + ' to table ' + parentRelation['relatedColumnName'] + ' for table named:' + currentTable['name'];
                                                     report.push(msg)
                                                     console.log(chalk.red(msg));
@@ -571,8 +537,8 @@ function processCli() {
                                 function(callback){
                                     console.log(chalk.blue('Verifying Geo Relations of table ' + currentTable['name']));
                                     if (table1.geoRelations){
-                                        table1.geoRelations.forEach(function(geoRelation){
-                                            let missingGeoRelations = table2.geoRelations.filter(function(missingGeoRelation){
+                                        table1.geoRelations.forEach((geoRelation)=>{
+                                            let missingGeoRelations = table2.geoRelations.filter((missingGeoRelation)=>{
                                                 if (geoRelation.name != missingGeoRelation.name){
                                                     return missingGeoRelation;
                                                 }
@@ -581,7 +547,9 @@ function processCli() {
                                             if (missingGeoRelations.length == 0) {
                                                 console.log(chalk.green('.....Relation names match between applications'))
                                             } else {
-                                                missingGeoRelations.forEach(function(newItem2){
+                                                missingGeoRelations.forEach((newItem2)=>{
+                                                    console.log(table1);
+                                                    console.log(_application2.appName);
                                                     console.log(chalk.white('.....' + _application1.appName + ' Geo Relations for table ' + geoRelation['name'] + ' to table ' + geoRelation['relatedColumnName'] + ' with a ' + geoRelation['relationshipType'] + ' type'));
                                                 })
                                             }
@@ -603,14 +571,36 @@ function processCli() {
                         }
                     })
                     callback(null);
+                },
+                /*
+                    Export all tables and columns to csv for Application 1
+                 */
+                (callback)=>{
+                    console.log(chalk.yellow('Exporting table information to csv file for each application1'));
+                    jsonexport(_application1.tables.tables,(err,csv)=>{
+                        fs.writeFileSync(path.join(_reportingDirectory,'application1_tables.csv'),csv,'utf8');
+                        console.log(chalk.blue('Successfully wrote application1_tables.csv'));
+                        callback(null);
+                    })
+                },
+                /*
+                    Export all tables and columns to csv for Application 2
+                 */
+                (callback)=>{
+                    console.log(chalk.yellow('Exporting table information to csv file for each application2'));
+                    jsonexport(_application2.tables.tables,(err,csv)=>{
+                        fs.writeFileSync(path.join(_reportingDirectory,'application2_tables.csv'),csv,'utf8');
+                        console.log(chalk.blue('Successfully wrote application2_tables.csv'));
+                        callback(null);
+                    })
                 }
-            ], function(err){
+            ], (err)=>{
                 if (err){
                     throw new Error(err);
                 } else {
                     console.log(chalk.yellow('Completed processing and comparing'))
                     console.log(chalk.yellow('Saving issues report...', path.join(__dirname,'issues_report.log')));
-                    writeReport(function(err){
+                    writeReport((err)=>{
                         if (err)callback(err);
                         console.log(chalk.yellow('Processing Completed, and report is saved'));
                         process.exit(0);
@@ -620,19 +610,25 @@ function processCli() {
             })
         }
     })
-
 }
 
+/*
+Write details of error report to issues_report.log
+ */
 function writeReport(callback) {
     let file = fs.createWriteStream(path.join(__dirname,'issues_report.log'));
-    file.on('error', function(err) {
+    file.on('error', (err) =>{
         if (err) callback(err);
     });
-    report.forEach(function(item) {
+    report.forEach((item) => {
         file.write(item + '\n');
     })
     file.end();
 }
+
+/*
+Helper function for Table Name mismatching
+ */
 function compareTableNames(table1, table2) {
     if (table1.name != table2.name) {
         return "TABLE Name Mismatch - Application 2 TableName: " + table2.name + " doesn't match Application 1 TableName: " + table1.name;
@@ -641,4 +637,5 @@ function compareTableNames(table1, table2) {
     }
 }
 
+// Start processing, entry point is here.
 processCli();
