@@ -471,13 +471,19 @@ function processCli() {
                                 function(callback){
                                     console.log(chalk.blue('Verifying Relations of table ' + currentTable['name']));
                                     if (table1.relations) {
-                                        let missingRelations = table2.relations.filter((missingRelation)=>{
-                                            table1.relations.filter((nested)=>{
-                                                if (nested.name != missingRelation.name){
-                                                    return missingRelation;
-                                                }
+                                        let missingRelations;
+                                        if (table2.relations) {
+                                             missingRelations = table2.relations.filter((missingRelation)=>{
+                                                table1.relations.filter((nested)=>{
+                                                    if (nested.name != missingRelation.name){
+                                                        return missingRelation;
+                                                    }
+                                                })
                                             })
-                                        })
+
+                                        } else {
+                                            missingRelations = table1.relations;
+                                        }
                                         table1.relations.forEach((relation)=>{
                                             if (missingRelations.length == 0) {
                                                 console.log(chalk.green('.....Relation tables names match between applications'))
@@ -488,13 +494,15 @@ function processCli() {
                                                             return _item;
                                                         }
                                                     })
-                                                    let msg = 'MISMATCHING.....' + _application1.appName + ' Relations of ' + missing['name'] + ' to table ' + _relatedTable[0]['name'] + ' with a ' + missing['relationshipType'] + ' type';
+                                                    let msg = 'MISMATCHING.....' + _application1.appName + ' Relations of ' + missing['name'] + ' field within table ' + currentTable['name'] + ' to table '+ _relatedTable[0]['name'] + ' with a ' + missing['relationshipType'] + ' type is missing in Application' + _application2.appName;
                                                     report.push(msg);
                                                     console.log(chalk.red(msg));
                                                 })
 
                                             }
                                         })
+
+
                                     }
                                     else {
                                         console.log(chalk.white('.....No Relations for table name ' + currentTable['name']))
@@ -522,7 +530,7 @@ function processCli() {
                                                 console.log(chalk.green('.....Parent Relation names match between applications'))
                                             } else {
                                                 missingParentRelations.forEach((newItem2)=>{
-                                                    let msg = 'MISMATCHING.....' + _application1.appName + ' Parent Relations from ' + parentRelation['name'] + ' to table ' + parentRelation['relatedColumnName'] + ' for table named:' + currentTable['name'];
+                                                    let msg = '.....MISSING ' + _application1.appName + ' Parent Relations from ' + parentRelation['name'] + ' field within table ' + currentTable['name'] + ' to table ' + parentRelation['relatedColumnName'] + ' for table named:' + currentTable['name'];
                                                     report.push(msg)
                                                     console.log(chalk.red(msg));
                                                 })
@@ -537,20 +545,27 @@ function processCli() {
                                 function(callback){
                                     console.log(chalk.blue('Verifying Geo Relations of table ' + currentTable['name']));
                                     if (table1.geoRelations){
+                                        let missingGeoRelations;
+                                        if (!table2.geoRelations) {
+                                            table2.geoRelations = [];
+                                        }
                                         table1.geoRelations.forEach((geoRelation)=>{
-                                            let missingGeoRelations = table2.geoRelations.filter((missingGeoRelation)=>{
-                                                if (geoRelation.name != missingGeoRelation.name){
-                                                    return missingGeoRelation;
-                                                }
-                                            })
-
+                                            if (table2.geoRelations) {
+                                                missingGeoRelations = table2.geoRelations.filter((missingGeoRelation)=>{
+                                                    if (geoRelation.name != missingGeoRelation.name){
+                                                        return missingGeoRelation;
+                                                    }
+                                                })
+                                            } else {
+                                                missingGeoRelations = table1.geoRelations;
+                                            }
                                             if (missingGeoRelations.length == 0) {
                                                 console.log(chalk.green('.....Relation names match between applications'))
                                             } else {
                                                 missingGeoRelations.forEach((newItem2)=>{
-                                                    console.log(table1);
-                                                    console.log(_application2.appName);
-                                                    console.log(chalk.white('.....' + _application1.appName + ' Geo Relations for table ' + geoRelation['name'] + ' to table ' + geoRelation['relatedColumnName'] + ' with a ' + geoRelation['relationshipType'] + ' type'));
+                                                    let msg = '.....MISSING ' + _application1.appName + ' Geo Relations for table ' + geoRelation['name'] + ' to GEOPOINTS with a ' + geoRelation['relationshipType'] + ' type is missing from ' + _application2.appName;
+                                                    report.push(msg);
+                                                    console.log(chalk.red(msg));
                                                 })
                                             }
                                         })
@@ -558,15 +573,19 @@ function processCli() {
 
                                     }
                                     else {
-                                        console.log(chalk.yellow('.....Geo Relations are not defined for ' + currentTable['name']))
+                                        console.log(chalk.white('.....Geo Relations are not defined for ' + currentTable['name']))
                                     }
                                     callback(null);
                                 },
 
                             ])
                         } else {
-                            let msg = '.....Skipping table/field validation for ' + currentTable['name'] + ' because it is missing in ' + _application2.appName;
+                            let msg = 'TABLE_MISSING.....' + currentTable['name'] + ' is missing in ' + _application2.appName + ' column details are below: ';
                             report.push(msg);
+                            currentTable.columns.forEach(function(item) {
+                                let msg = '.....Missing column ' + item.name + ' with data type ' + item.dataType + ' with data size of ' + item.dataSize + ' with default value of ' + item.defaultValue + ' and is required: ' + item.required.toString();
+                                report.push(msg);
+                            });
                             console.log(chalk.red(msg));
                         }
                     })
