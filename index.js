@@ -461,7 +461,7 @@ function processCli() {
 
                                         }
                                         else {
-                                            let msg = 'FIELD_MISSING.....Column ' + currentColumn.name + ' is missing from ' + _application2.appName + ' for table ' + currentTable['name'];
+                                            let msg = 'FIELD_MISSING.....Column ' + currentColumn.name + ' is missing from Application 2 for table ' + currentTable['name'] + ' with data type ' + currentColumn.dataType + ' with data size: ' + currentColumn.dataSize + ' with default value: ' + currentColumn.defaultValue + ' and is required: ' + currentColumn.required;
                                             report.push(msg);
                                             console.log(chalk.red(msg));
                                         }
@@ -544,26 +544,26 @@ function processCli() {
                                 },
                                 function(callback){
                                     console.log(chalk.blue('Verifying Geo Relations of table ' + currentTable['name']));
-                                    if (table1.geoRelations){
+                                    if (table1.geoRelation){
                                         let missingGeoRelations;
-                                        if (!table2.geoRelations) {
-                                            table2.geoRelations = [];
+                                        if (!table2.geoRelation) {
+                                            table2.geoRelation = [];
                                         }
-                                        table1.geoRelations.forEach((geoRelation)=>{
-                                            if (table2.geoRelations) {
-                                                missingGeoRelations = table2.geoRelations.filter((missingGeoRelation)=>{
+                                        table1.geoRelation.forEach((_geoRelation)=>{
+                                            if (table2.geoRelation) {
+                                                missingGeoRelations = table2.geoRelation.filter((missingGeoRelation)=>{
                                                     if (geoRelation.name != missingGeoRelation.name){
                                                         return missingGeoRelation;
                                                     }
                                                 })
                                             } else {
-                                                missingGeoRelations = table1.geoRelations;
+                                                missingGeoRelations = table1.geoRelation;
                                             }
                                             if (missingGeoRelations.length == 0) {
                                                 console.log(chalk.green('.....Relation names match between applications'))
                                             } else {
                                                 missingGeoRelations.forEach((newItem2)=>{
-                                                    let msg = '.....MISSING ' + _application1.appName + ' Geo Relations for table ' + geoRelation['name'] + ' to GEOPOINTS with a ' + geoRelation['relationshipType'] + ' type is missing from ' + _application2.appName;
+                                                    let msg = '.....MISSING GeoRelations ' + _application1.appName + ' for table ' + currentTable['name'] + ' for column ' + _geoRelation['name'] + ' to GEOPOINTS with a ' + _geoRelation['relationshipType'] + ' type is missing from ' + _application2.appName;
                                                     report.push(msg);
                                                     console.log(chalk.red(msg));
                                                 })
