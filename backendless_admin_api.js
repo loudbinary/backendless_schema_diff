@@ -24,9 +24,6 @@ function Backendless_admin_api(username,password) {
     this.username = username;
     this.password = password;
     this.options = options;
-    this.auth_key = '';
-    this.initialized = false;
-    this.authorized = false;
     _http = this;
 }
 
@@ -48,7 +45,6 @@ Backendless_admin_api.prototype = {
                     console.log(chalk.white('.....Successfully logged into developer api'));
                     options.auth_key = this.headers['auth-key'];
                     options.headers['auth-key'] = this.headers['auth-key'];
-                    console.log(chalk.white('.....HTTP Agent updated for reuse'));
                     options.initialized = true;
                     options.authorized = true;
                     callback(null);
@@ -78,7 +74,6 @@ Backendless_admin_api.prototype = {
 
             res.on("end", function () {
                 var body = Buffer.concat(chunks);
-                //console.log(JSON.parse(body.toString()));
                 callback(null,JSON.parse(body.toString()));
             });
 
@@ -167,12 +162,6 @@ Backendless_admin_api.prototype = {
         });
         req.end();
     },
-}
-
-function filterByApp(item,appId) {
-    if (item.appId == appId) {
-        return item;
-    }
 }
 
 module.exports = Backendless_admin_api;

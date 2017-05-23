@@ -375,6 +375,7 @@ function processCli() {
                             async.series([
                                 function(callback){
                                     table1.columns.forEach((currentColumn)=>{
+                                        let found = false;
                                         console.log(chalk.blue('Verifying ' + currentTable['name'] + ' column: ' +currentColumn['name']));
                                         let _table2Column= table2.columns.filter((filtered)=>{
                                             if (currentColumn.name == filtered.name) {
@@ -386,11 +387,12 @@ function processCli() {
                                             let table2Column = _table2Column[0];
 
                                             if (currentColumn['name'] == table2Column['name']) {
-                                                console.log(chalk.green(currentTable.name + '.....Column names match'));
+                                                found = true;
                                             }
 
                                             if (currentColumn['customRegex'] == table2Column['customRegex']) {
                                                 console.log(chalk.green('.....customRegex matches with value: ' + currentColumn['customRegex']));
+                                                found = true;
                                             } else {
                                                 let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field customRegex with value of: ' + currentColumn['customRegex'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table2Column['customRegex'];
                                                 report.push(msg);
@@ -399,6 +401,7 @@ function processCli() {
 
                                             if (currentColumn['dataSize'] == table2Column['dataSize']) {
                                                 console.log(chalk.green('.....dataSize matches with value: ' + currentColumn['dataSize']));
+                                                found = true;
                                             } else {
                                                 var msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field dataSize with value of: ' + currentColumn['dataSize'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table2Column['dataSize'];
                                                 report.push(msg);
@@ -407,6 +410,7 @@ function processCli() {
 
                                             if (currentColumn['dataType'] == table2Column['dataType']) {
                                                 console.log(chalk.green('.....Datatype matches with value: ' + currentColumn['dataType']));
+                                                found = true;
                                             } else {
                                                 let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field Datatype with value of: ' + currentColumn['dataType'] + ' - The value found in ' + _application2.name + ' for ' + currentColumn['name'] + ' is ' + table2Column['dataType'];
                                                 report.push(msg);
@@ -414,6 +418,7 @@ function processCli() {
                                             }
                                             if (currentColumn['defaultValue'] == table2Column['defaultValue']) {
                                                 console.log(chalk.green('.....defaultValue matches with value: ' + currentColumn['defaultValue']));
+                                                found = true;
                                             } else {
                                                 let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field defaultValue with value of: ' +  currentColumn['defaultValue'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table2Column['defaultValue'];
                                                 report.push(msg);
@@ -421,7 +426,8 @@ function processCli() {
                                             }
 
                                             if (currentColumn['indexed'] == table2Column['indexed']) {
-                                                console.log(chalk.green(currentColumn['name'] + '.....indexed matches with value: ' + currentColumn['indexed']));
+                                                console.log(chalk.green('.....indexed matches with value: ' + currentColumn['indexed']));
+                                                found = true;
                                             } else {
                                                 let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field indexed with value of: ' + currentColumn['indexed'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table2Column['indexed'];
                                                 report.push(msg);
@@ -430,6 +436,7 @@ function processCli() {
 
                                             if (currentColumn['primaryKey'] == table2Column['primaryKey']) {
                                                 console.log(chalk.green('.....primaryKey matches with value: ' + currentColumn['primaryKey']));
+                                                found = true;
                                             } else {
                                                 let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field primaryKey with value of: ' + currentColumn['primaryKey'] + ' - The value found in ' + _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table2Column['primaryKey'];
                                                 report.push(msg);
@@ -437,6 +444,7 @@ function processCli() {
                                             }
                                             if (currentColumn['readOnly'] == table2Column['readOnly']) {
                                                 console.log(chalk.green('.....readOnly matches with value: ' + currentColumn['readOnly']));
+                                                found = true;
                                             } else {
                                                 let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field readOnly with value of' + currentColumn['readOnly'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table2Column['readOnly'];
                                                 report.push(msg);
@@ -445,6 +453,7 @@ function processCli() {
 
                                             if (currentColumn['required'] == table2Column['required']) {
                                                 console.log(chalk.green('.....required matches with value: ' + currentColumn['required']));
+                                                found = true;
                                             } else {
                                                 let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field required does not match: '  +  currentColumn['required'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table2Column['required'];
                                                 report.push(msg);
@@ -453,10 +462,15 @@ function processCli() {
 
                                             if (currentColumn['unique'] == table2Column['unique']) {
                                                 console.log(chalk.green('.....unique matches with value: ' + currentColumn['unique']));
+                                                found = true;
                                             } else {
                                                 let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field unique does not match: '  + currentColumn['unique'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table2Column['unique'];
                                                 report.push(msg)
                                                 console.log(chalk.red(msg));
+                                            }
+
+                                            if (found == false) {
+                                                console.log('NEEDS_TO_BE_DELETED.....Table: ' + currentTable + ' Column: ' + currentColumn.name);
                                             }
 
                                         }
@@ -480,7 +494,7 @@ function processCli() {
                                         })
                                         table1.relations.forEach((relation)=>{
                                             if (missingRelations.length == 0) {
-                                                console.log(chalk.green('.....Relation tables names match between applications'))
+                                                console.log(chalk.green('.....Found matching Relation tables name match between applications:' + relation.name));
                                             } else {
                                                 missingRelations.forEach((missing)=>{
                                                     var _relatedTable = _application1.tables.tables.filter((_item)=>{
@@ -567,7 +581,16 @@ function processCli() {
                         } else {
                             let msg = '.....Skipping table/field validation for ' + currentTable['name'] + ' because it is missing in ' + _application2.appName;
                             report.push(msg);
+<<<<<<< Updated upstream
                             console.log(chalk.red(msg));
+=======
+                            let tmpMsg = [];
+                            currentTable.columns.forEach(function(item) {
+                                let tmpMsg = '.....Missing column ' + item.name + ' with data type ' + item.dataType + ' with data size of ' + item.dataSize + ' with default value of ' + item.defaultValue + ' and is required: ' + item.required.toString();
+                                report.push(tmpMsg);
+                            });
+                            console.log(chalk.red(tmpMsg));
+>>>>>>> Stashed changes
                         }
                     })
                     callback(null);
