@@ -333,9 +333,9 @@ function processCli() {
                     Simple comparison of table names and each tables columns for differences between Application 1 and Application 2
                  */
                 (callback)=>{
-                    console.log(chalk.yellow('Comparing table names and their fields between applications.'));
+                    console.log(chalk.yellow('Verifying table names exist in both applications databases.'));
                     _application1.tables.tables.forEach((item)=>{
-                        console.log(chalk.white('.....Comparing ' + item.name + ' table name between applications '));
+                        process.stdout.write(chalk.white('.....Verifying ' + item.name + ' table name exists in application2 ' + _application2.appName));
                         let table2Name = _application2.tables.tables.filter((newItem)=>{
                             if (item.name == newItem.name) {
                                 return newItem;
@@ -351,16 +351,61 @@ function processCli() {
                         } else {
                             let msg = 'MISSING: Table found in Application 1, named ' + item.name + ', is missing from Application 2'
                             report.push(msg);
-                            console.log(chalk.red(msg));
+                            console.log(chalk.red('.....', msg));
                         }
 
                     })
                     callback(null);
                 },
+                (callback) => {
+                    _application1.tables.usersTables.forEach((appOneTable) =>{
+                        process.stdout.write(chalk.white('.....Verifying table: [' + appOneTable.name + '] exists in application 2: [' + _application2.appName +']'));
+                        let _foundTable2 = _application2.tables.usersTables.filter((appTwoTable) =>{
+                            if (appOneTable.name == appTwoTable.name) {
+                                return appTwoTable;
+                            }
+                        })
+
+                        if (_foundTable2.length >0) {
+                            let foundTable2 = _foundTable2[0];
+                            console.log(chalk.green('.....Table: ' + appOneTable.name + ' exists in application 2: ' + _application2.appName + ', verifying columns match'));
+                            appOneTable.columns.forEach((appOneColumn) => {
+                                process.stdout.write(chalk.white('.....Verifying Application 1: [' + _application1.appName + '] Table: [' + appOneTable.name + '] Column: [' + appOneColumn.name + '] exists in Application 2: [' + _application2.appName+ ']'));
+                                let foundColumnApp2 = foundTable2.columns.filter((appTwoColumn) => {
+                                    if (appTwoColumn.name == appOneColumn.name) {
+                                        return appTwoColumn;
+                                    }
+                                })
+
+                                if (foundColumnApp2.length > 0) {
+                                    console.log(chalk.green('.....Matching!'));
+                                } else {
+                                    console.log(chalk.red('.....Missing!'));
+                                }
+                            })
+                            compareRealtions(appOneTable,foundTable2);
+                        } else {
+                            console.log(chalk.red('.....Missing!'));
+                            let msg = 'MISSING_TABLE ['+ appOneTable.name + '] within Application 2 [' + _application2.appName + ']';
+                            report.push(msg);
+                            console.log(chalk.red('.....' + msg));
+                            appOneTable.columns.forEach((missing) =>{
+                                let msg = 'MISSING_COLUMN.....Table ['+ appOneTable.name + '] Column Name [' + missing.name + '] Data Type [' + missing.dataType + '] Read-Only [' + missing.readOnly + '] Auto-Created [' + missing.autoCreated + '] Validator [' + missing.validator + '] Required [' + missing.required + '] Unique [' + missing.unique + ']'
+                                console.log(chalk.red('     ' + msg));
+                                report.push(msg);
+                            })
+                            //compareRealtions(appOneTable,foundTable2);
+                        }
+                    });
+
+                    callback(null);
+                },
+
                 /*
                     Details comparison of table names, tables columns, and tables relationships between Application 1 and Application 2
                  */
-                (callback)=>{
+                /*
+                (callback)=>    {
                     console.log(chalk.yellow('Comparing ' + _application1.appName + ' to ' + _application2.appName));
                     _application1.tables.tables.forEach((currentTable)=>{
                         console.log(chalk.white('.....Verifying column details for ' + currentTable.name));
@@ -374,7 +419,10 @@ function processCli() {
                             let table2 = _table2[0];
                             async.series([
                                 function(callback){
+                                    let processed = [];  // To be used to verify columns are missing in source, which are available in comparing application
                                     table1.columns.forEach((currentColumn)=>{
+
+                                        processed.push(currentColumn);
                                         console.log(chalk.blue('Verifying ' + currentTable['name'] + ' column: ' +currentColumn['name']));
                                         let _table2Column= table2.columns.filter((filtered)=>{
                                             if (currentColumn.name == filtered.name) {
@@ -466,6 +514,100 @@ function processCli() {
                                             console.log(chalk.red(msg));
                                         }
                                     })
+                                    table2.columns.forEach((currentColumn)=>{
+
+                                        processed.push(currentColumn);
+                                        console.log(chalk.blue('Verifying ' + currentTable['name'] + ' column: ' +currentColumn['name']));
+                                        let _table1Column= table1.columns.filter((filtered)=>{
+                                            if (currentColumn.name == filtered.name) {
+                                                return filtered;
+                                            }
+                                        })
+
+                                        if (_table1Column.length != 0) {
+                                            let table1Column = _table1Column[0];
+
+                                            if (currentColumn['name'] == table1Column['name']) {
+                                                console.log(chalk.green(currentTable.name + '.....Column names match'));
+                                            }
+
+                                            if (currentColumn['customRegex'] == table1Column['customRegex']) {
+                                                console.log(chalk.green('.....customRegex matches with value: ' + currentColumn['customRegex']));
+                                            } else {
+                                                let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field customRegex with value of: ' + currentColumn['customRegex'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table1Column['customRegex'];
+                                                report.push(msg);
+                                                console.log(chalk.red(msg));
+                                            }
+
+                                            if (currentColumn['dataSize'] == table1Column['dataSize']) {
+                                                console.log(chalk.green('.....dataSize matches with value: ' + currentColumn['dataSize']));
+                                            } else {
+                                                var msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field dataSize with value of: ' + currentColumn['dataSize'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table1Column['dataSize'];
+                                                report.push(msg);
+                                                console.log(chalk.red(msg));
+                                            }
+
+                                            if (currentColumn['dataType'] == table1Column['dataType']) {
+                                                console.log(chalk.green('.....Datatype matches with value: ' + currentColumn['dataType']));
+                                            } else {
+                                                let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field Datatype with value of: ' + currentColumn['dataType'] + ' - The value found in ' + _application2.name + ' for ' + currentColumn['name'] + ' is ' + table1Column['dataType'];
+                                                report.push(msg);
+                                                console.log(chalk.red(msg));
+                                            }
+                                            if (currentColumn['defaultValue'] == table1Column['defaultValue']) {
+                                                console.log(chalk.green('.....defaultValue matches with value: ' + currentColumn['defaultValue']));
+                                            } else {
+                                                let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field defaultValue with value of: ' +  currentColumn['defaultValue'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table1Column['defaultValue'];
+                                                report.push(msg);
+                                                console.log(chalk.red(msg));
+                                            }
+
+                                            if (currentColumn['indexed'] == table1Column['indexed']) {
+                                                console.log(chalk.green(currentColumn['name'] + '.....indexed matches with value: ' + currentColumn['indexed']));
+                                            } else {
+                                                let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field indexed with value of: ' + currentColumn['indexed'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table1Column['indexed'];
+                                                report.push(msg);
+                                                console.log(chalk.red(msg));
+                                            }
+
+                                            if (currentColumn['primaryKey'] == table1Column['primaryKey']) {
+                                                console.log(chalk.green('.....primaryKey matches with value: ' + currentColumn['primaryKey']));
+                                            } else {
+                                                let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field primaryKey with value of: ' + currentColumn['primaryKey'] + ' - The value found in ' + _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table1Column['primaryKey'];
+                                                report.push(msg);
+                                                console.log(chalk.red(msg));
+                                            }
+                                            if (currentColumn['readOnly'] == table1Column['readOnly']) {
+                                                console.log(chalk.green('.....readOnly matches with value: ' + currentColumn['readOnly']));
+                                            } else {
+                                                let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field readOnly with value of' + currentColumn['readOnly'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table1Column['readOnly'];
+                                                report.push(msg);
+                                                console.log(chalk.red(msg));
+                                            }
+
+                                            if (currentColumn['required'] == table1Column['required']) {
+                                                console.log(chalk.green('.....required matches with value: ' + currentColumn['required']));
+                                            } else {
+                                                let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field required does not match: '  +  currentColumn['required'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table1Column['required'];
+                                                report.push(msg);
+                                                console.log(chalk.red(msg));
+                                            }
+
+                                            if (currentColumn['unique'] == table1Column['unique']) {
+                                                console.log(chalk.green('.....unique matches with value: ' + currentColumn['unique']));
+                                            } else {
+                                                let msg = 'MISMATCHING.....' + _application1.appName + ' table: ' + currentTable['name'] + ' field unique does not match: '  + currentColumn['unique'] + ' - The value found in '+ _application2.appName + ' for ' + currentColumn['name'] + ' is ' + table1Column['unique'];
+                                                report.push(msg)
+                                                console.log(chalk.red(msg));
+                                            }
+
+                                        }
+                                        else {
+                                            let msg = 'FIELD_MISSING.....Column ' + currentColumn.name + ' is missing from ' + _application2.appName + ' for table ' + currentTable['name'];
+                                            report.push(msg);
+                                            console.log(chalk.red(msg));
+                                        }
+                                    })
                                     callback(null);
                                 },
                                 function(callback){
@@ -538,11 +680,17 @@ function processCli() {
                                     console.log(chalk.blue('Verifying Geo Relations of table ' + currentTable['name']));
                                     if (table1.geoRelations){
                                         table1.geoRelations.forEach((geoRelation)=>{
-                                            let missingGeoRelations = table2.geoRelations.filter((missingGeoRelation)=>{
-                                                if (geoRelation.name != missingGeoRelation.name){
-                                                    return missingGeoRelation;
-                                                }
-                                            })
+                                            let missingGeoRelations;
+                                            if (table2.geoRelations) {
+                                                missingGeoRelations = table2.geoRelations.filter((missingGeoRelation)=>{
+                                                    if (geoRelation.name != missingGeoRelation.name){
+                                                        return missingGeoRelation;
+                                                    }
+                                                })
+
+                                            } else {
+                                                missingGeoRelations = table1.geoRelations;
+                                            }
 
                                             if (missingGeoRelations.length == 0) {
                                                 console.log(chalk.green('.....Relation names match between applications'))
@@ -572,6 +720,8 @@ function processCli() {
                     })
                     callback(null);
                 },
+                */
+
                 /*
                     Export all tables and columns to csv for Application 1
                  */
@@ -612,6 +762,63 @@ function processCli() {
     })
 }
 
+/*
+Perform relations check of table
+ */
+
+function checkRelations(appOneTable,appTwoTable) {
+    if (appOneTable.relations) {
+        console.log(chalk.yellow('Comparing all found relations for table [' + appOneTable.name + '] to relations of same table in Application 2 [' +_application2.appName + ']'));
+        appOneTable.relations.forEach((relation)=>{
+            process.stdout.write('.....Comparing Table [' + appOneTable.name + '] Relation [' + relation.name + '] to same in Application 2 [' + _application2.appName + ']');
+            let tableTwoRelation = appTwoTable.relations.filter((appTwoRelation)=>{
+                if (appTwoRelation.name == relation.name) {
+                    return appTwoRelation;
+                }
+            });
+
+            if (tableTwoRelation.length > 0) {
+                // Found relation
+                console.log(chalk.green('.....Matching'))
+            } else {
+                // Missing Relation
+                console.log(chalk.red('.....Missing!'));
+                let msg = 'MISSING_RELATION.....Table [' + appOneTable.name + '] Relation [' + relation.name + '] to same in Application 2 [' + _application2.appName + '] with the following details REQUIRED [' + relation.required + '] UNIQUE [' + relation.unique +'] RELATIONSHIP_TYPE [' + relation.relationshipType +']  AUTO_LOAD [' + relation.autoLoad + ']'
+                report.push(msg);
+            }
+        })
+    }
+}
+
+
+
+/*
+Compare and report relations differences between two applications
+ */
+function compareRealtions(appOneTable,appTwoTable) {
+    async.series([
+        (callback) =>{
+        if (!appOneTable.relations && !appTwoTable.relations) {
+            console.log(chalk.white('......No Relations'))
+        } else {
+            try{
+                if (appOneTable.relations.length === appOneTable.relations.length) {
+                    //Assuming we didn't have a deletion, or something added on wrong side.
+                    return checkRelations(appOneTable,appTwoTable);
+                } else {
+                    console.log('POSSIBLE_DELETION of relation in Application 1 ['+ _application1.appName + '], or addition of relation in Application 2 [' + _application2.appName);
+                }
+                callback(null);
+            }
+            catch (e){
+            }
+            console.log(chalk.red('Unable to check length of table relations'));
+         }
+        }
+    ])
+
+
+}
 /*
 Write details of error report to issues_report.log
  */
