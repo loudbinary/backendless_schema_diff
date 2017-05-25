@@ -61,13 +61,79 @@ const _reportingDirectory=__dirname.toString(),
                 }
             ]
         }
-      ]; // Console Applications help information
+      ],
+      startTime = new Date().getTime(); // Console Applications help information
 
 let applications = [],
-    _application1,
+     _application1,
      _application2,
-     report = [];
+     report = [],
+    Application1,
+    Application2;
 
+let sort_by = (field, reverse, primer) =>{
+    let key = primer ?
+        (x)=> {return primer(x[field])} :
+        (x)=> {return x[field]};
+    reverse = !reverse ? 1 : -1;
+    return  (a, b) => {
+        return a = key(a), b = key(b), reverse * ((a > b) - (b > a));
+    }
+};
+/*
+Use for sort_by
+ // Sort by table, case-insensitive, A-Z
+ table.sort(sort_by('appName', false, function(a){return a.toUpperCase()}));
+ */
+function Column(){
+    return {
+        customRegex: null,
+        dataSize: null,
+        dataType: null,
+        defaultValue: null,
+        indexed: null,
+        name: null,
+        primaryKey: null,
+        readyOnly: null,
+        required: null,
+        unique: null
+    }
+}
+
+function GeoRelation() {
+    return {
+        autoLoad: null,
+        isPrimaryKey: null,
+        name: null,
+        relatedColumnName: null,
+        relatedTable: null,
+        relationshipType: null,
+        required: null,
+        unique: null
+    }
+}
+
+function Relation() {
+    return new GeoRelation() // Because I'm tired TODO: Fix this with a realistic basd.
+}
+function Table(){
+    return {
+            Name: null,
+            Columns: [],
+            GeoRelations: [],
+            Relations: [],
+            FileRelations: [],
+            }
+}
+
+function Application() {
+   return  {
+       Name:'',
+       ReportDate: startTime,
+       Tables: []
+
+    }
+}
 
 
 /*
@@ -188,10 +254,18 @@ function findApplicationsInList(applications,callback) {
     for(var x = 0; x < applications.length; x++){
         if (applications[x].appName == options.compare['application-name1']){
             _application1 = applications[x];
+            Application1.Name = applications[x].appName;
+            Application1.appName = applications[x].appName;
+            Application1.appId = applications[x].appId;
+            Application1.version= applications[x].version;
             console.log(chalk.white('.....Found application-name1 ' + _application1.appName + ', the appId is: ', applications[x].appId));
         }
         if (applications[x].appName == options.compare['application-name2']){
             _application2 = applications[x];
+            Application2.Name = applications[x].appName;
+            Application2.appName = applications[x].appName;
+            Application2.appId = applications[x].appId;
+            Application2.version = applications[x].version;
             console.log(chalk.white('.....Found application-name2 ' + _application2.appName + ', the appId is: ', applications[x].appId));
         }
     }
@@ -205,7 +279,11 @@ function findApplicationsInList(applications,callback) {
 Applications' main processing loop.
  */
 function processCli() {
+    // Display graphic
     console.log(getUsage(headerOnlySection));
+
+    Application1 = new Application();
+    Application2 = new Application();
 
     cleanUp(function(){
         if (options.compare){
@@ -242,6 +320,20 @@ function processCli() {
                                     console.log(chalk.red('Unable to locate application names provided as arguments in list'));
                                     callback('Missing applications');
                                 } else {
+                                    /* Both application 1 and 2 should look like below.
+                                     {
+                                         "Tables": [],
+                                         "Relations": [],
+                                         "GeoRelations": [],
+                                         "FileRelations": [],
+                                         "appName": "droneup_be",
+                                         "appId": "467026CB-77DD-803B-FFFB-051EBAC2A300",
+                                         "version": "3.1.0"
+                                     }
+
+                                     console.log(Application1);
+                                     console.log(Application2);
+                                     */
                                     callback(null);
                                 }
                             })
@@ -257,6 +349,7 @@ function processCli() {
                         if (err) callback(err);
                         if (!results) callback (err)
                         _application1.currentVersionId = results.currentVersionId;
+                        Application1.currentVersionId = results.currentVersionId;
                         callback(null);
                     })
                 },
@@ -268,6 +361,7 @@ function processCli() {
                         if (err) callback(err);
                         if (!results) callback (err)
                         _application2.currentVersionId = results.currentVersionId;
+                        Application2.currentVersionId = results.currentVersionId;
                         callback(null);
                     })
                 },
@@ -311,6 +405,61 @@ function processCli() {
                             callback(err)
                         } else {
                             _application1.tables = results;
+
+                            for (var x = 0; x < _application1.tables.usersTables.length; x++) {
+                                let table = new Table();
+                                table.Name = _application1.tables.usersTables[x].name;
+                                table.Columns = _application1.tables.usersTables[x].columns.map(function(filtered){
+                                    "use strict";
+                                    let column = new Column();
+                                    column.customRegex = filtered.customRegex,
+                                    column.dataSize =filtered.dataSize,
+                                    column.dataType = filtered.dataType,
+                                    column.defaultValue = filtered.defaultValue,
+                                    column.indexed = filtered.indexed,
+                                    column.name = filtered.name,
+                                    column.primaryKey = filtered.primaryKey,
+                                    column.readyOnly = filtered.readOnly,
+                                    column.required = filtered.required,
+                                    column.unique = filtered.unique
+                                    return column;
+                                });
+                                table.Columns.sort(sort_by('name',false,function(a){return a.toUpperCase()}));
+
+                                if (_application1.tables.usersTables[x].geoRelations !== null) {
+                                    table.GeoRelations = _application1.tables.usersTables[x].geoRelations.map(function(filteredGeo){
+                                        let geoRelation = new GeoRelation();
+                                        geoRelation.autoLoad = filteredGeo.autoLoad,
+                                            geoRelation.isPrimaryKey = filteredGeo.isPrimaryKey,
+                                            geoRelation.name =  filteredGeo.name,
+                                            geoRelation.relatedColumnName = filteredGeo.relatedColumnName,
+                                            geoRelation.relatedTable = filteredGeo.relatedTable,
+                                            geoRelation.relationshipType = filteredGeo.relationshipType,
+                                            geoRelation.required = filteredGeo.required,
+                                            geoRelation.unique = filteredGeo.unique
+                                        return geoRelation;
+                                    })
+                                    table.GeoRelations.sort(sort_by('name',false,function(a){return a.toUpperCase()}));
+                                }
+
+                                if (_application1.tables.usersTables[x].relations !== null) {
+                                    table.Relations = _application1.tables.usersTables[x].relations.map(function(filteredRelation){
+                                        let relation = new Relation();
+                                        relation.autoLoad = filteredRelation.autoLoad,
+                                        relation.isPrimaryKey = filteredRelation.isPrimaryKey,
+                                        relation.name =  filteredRelation.name,
+                                        relation.relatedColumnName = filteredRelation.relatedColumnName,
+                                        //relation.relatedTable = filteredRelation.relatedTable,
+                                        relation.relationshipType = filteredRelation.relationshipType,
+                                        relation.required = filteredRelation.required,
+                                        relation.unique = filteredRelation.unique
+                                        return relation;
+                                    })
+                                    table.Relations.sort(sort_by('name',false,function(a){return a.toUpperCase()}));
+                                }
+                                    Application1.Tables.push(table);
+                            }
+
                             callback(null);
                         }
                     })
@@ -320,11 +469,67 @@ function processCli() {
                  */
                 (callback)=>{
                     console.log(chalk.yellow('Getting all datatables for', _application2.appName));
-                    Backendless_admin_api.getApplicationsTables(_application2.appId, _application2.currentVersionId,_application2.secretKey,(err,results)=>{
+                    Backendless_admin_api.getApplicationsTables(_application2.appId, _application2.currentVersionId, _application2.secretKey,(err,results)=>{
                         if (err){
                             callback(err)
                         } else {
                             _application2.tables = results;
+
+                            for (var x = 0; x < _application2.tables.usersTables.length; x++) {
+                                let table = new Table();
+                                table.Name = _application2.tables.usersTables[x].name;
+                                table.Columns = _application2.tables.usersTables[x].columns.map(function(filtered){
+                                    "use strict";
+                                    let column = new Column();
+                                    column.customRegex = filtered.customRegex,
+                                        column.dataSize =filtered.dataSize,
+                                        column.dataType = filtered.dataType,
+                                        column.defaultValue = filtered.defaultValue,
+                                        column.indexed = filtered.indexed,
+                                        column.name = filtered.name,
+                                        column.primaryKey = filtered.primaryKey,
+                                        column.readyOnly = filtered.readOnly,
+                                        column.required = filtered.required,
+                                        column.unique = filtered.unique
+                                    return column;
+                                });
+                                table.Columns.sort(sort_by('name',false,function(a){return a.toUpperCase()}));
+
+                                if (_application2.tables.usersTables[x].geoRelations !== null) {
+                                    table.GeoRelations = _application2.tables.usersTables[x].geoRelations.map(function(filteredGeo){
+                                        let geoRelation = new GeoRelation();
+                                        geoRelation.autoLoad = filteredGeo.autoLoad,
+                                            geoRelation.isPrimaryKey = filteredGeo.isPrimaryKey,
+                                            geoRelation.name =  filteredGeo.name,
+                                            geoRelation.relatedColumnName = filteredGeo.relatedColumnName,
+                                            geoRelation.relatedTable = filteredGeo.relatedTable,
+                                            geoRelation.relationshipType = filteredGeo.relationshipType,
+                                            geoRelation.required = filteredGeo.required,
+                                            geoRelation.unique = filteredGeo.unique
+                                        return geoRelation;
+                                    })
+                                    table.GeoRelations.sort(sort_by('name',false,function(a){return a.toUpperCase()}));
+                                }
+
+                                if (_application2.tables.usersTables[x].relations !== null) {
+                                    table.Relations = _application2.tables.usersTables[x].relations.map(function(filteredRelation){
+                                        let relation = new Relation();
+                                        relation.autoLoad = filteredRelation.autoLoad,
+                                            relation.isPrimaryKey = filteredRelation.isPrimaryKey,
+                                            relation.name =  filteredRelation.name,
+                                            relation.relatedColumnName = filteredRelation.relatedColumnName,
+                                            //relation.relatedTable = filteredRelation.relatedTable,
+                                            relation.relationshipType = filteredRelation.relationshipType,
+                                            relation.required = filteredRelation.required,
+                                            relation.unique = filteredRelation.unique
+                                        return relation;
+                                    })
+                                    table.Relations.sort(sort_by('name',false,function(a){return a.toUpperCase()}));
+                                }
+                                Application2.Tables.push(table);
+                            }
+                            console.log(Application1);
+
                             callback(null);
                         }
                     })
@@ -359,7 +564,7 @@ function processCli() {
                 },
                 (callback) => {
                     _application1.tables.usersTables.forEach((appOneTable) =>{
-                        process.stdout.write(chalk.white('.....Verifying table: [' + appOneTable.name + '] exists in application 2: [' + _application2.appName +']'));
+                        process.stdout.write(chalk.yellow('Verifying that table: [' + appOneTable.name + '] exists in application 2: [' + _application2.appName +']'));
                         let _foundTable2 = _application2.tables.usersTables.filter((appTwoTable) =>{
                             if (appOneTable.name == appTwoTable.name) {
                                 return appTwoTable;
@@ -368,9 +573,10 @@ function processCli() {
 
                         if (_foundTable2.length >0) {
                             let foundTable2 = _foundTable2[0];
-                            console.log(chalk.green('.....Table: ' + appOneTable.name + ' exists in application 2: ' + _application2.appName + ', verifying columns match'));
+                            console.log(chalk.green('.....Matching!'))
+                            console.log(chalk.yellow('Table: ' + appOneTable.name + ' validation for Application 2: [' + _application2.appName + '], columns match'));
                             appOneTable.columns.forEach((appOneColumn) => {
-                                process.stdout.write(chalk.white('.....Verifying Application 1: [' + _application1.appName + '] Table: [' + appOneTable.name + '] Column: [' + appOneColumn.name + '] exists in Application 2: [' + _application2.appName+ ']'));
+                                process.stdout.write(chalk.white('.....Verifying that Application 1: [' + _application1.appName + '] Table: [' + appOneTable.name + '] Column: [' + appOneColumn.name + '] exists in Application 2: [' + _application2.appName+ ']'));
                                 let foundColumnApp2 = foundTable2.columns.filter((appTwoColumn) => {
                                     if (appTwoColumn.name == appOneColumn.name) {
                                         return appTwoColumn;
@@ -383,7 +589,8 @@ function processCli() {
                                     console.log(chalk.red('.....Missing!'));
                                 }
                             })
-                            compareRealtions(appOneTable,foundTable2);
+                            compareRelations(appOneTable,foundTable2);
+                            compareGeoRelations(appOneTable,foundTable2);
                         } else {
                             console.log(chalk.red('.....Missing!'));
                             let msg = 'MISSING_TABLE ['+ appOneTable.name + '] within Application 2 [' + _application2.appName + ']';
@@ -770,7 +977,7 @@ function checkRelations(appOneTable,appTwoTable) {
     if (appOneTable.relations) {
         console.log(chalk.yellow('Comparing all found relations for table [' + appOneTable.name + '] to relations of same table in Application 2 [' +_application2.appName + ']'));
         appOneTable.relations.forEach((relation)=>{
-            process.stdout.write('.....Comparing Table [' + appOneTable.name + '] Relation [' + relation.name + '] to same in Application 2 [' + _application2.appName + ']');
+            process.stdout.write(chalk.white('.....Comparing Table [' + appOneTable.name + '] Relation [' + relation.name + '] to same in Application 2 [' + _application2.appName + ']'));
             let tableTwoRelation = appTwoTable.relations.filter((appTwoRelation)=>{
                 if (appTwoRelation.name == relation.name) {
                     return appTwoRelation;
@@ -782,8 +989,9 @@ function checkRelations(appOneTable,appTwoTable) {
                 console.log(chalk.green('.....Matching'))
             } else {
                 // Missing Relation
-                console.log(chalk.red('.....Missing!'));
-                let msg = 'MISSING_RELATION.....Table [' + appOneTable.name + '] Relation [' + relation.name + '] to same in Application 2 [' + _application2.appName + '] with the following details REQUIRED [' + relation.required + '] UNIQUE [' + relation.unique +'] RELATIONSHIP_TYPE [' + relation.relationshipType +']  AUTO_LOAD [' + relation.autoLoad + ']'
+                let baseMsg = 'Table [' + appOneTable.name + '] Relation [' + relation.name + '] to same in Application 2 [' + _application2.appName + '] with the following details REQUIRED [' + relation.required + '] UNIQUE [' + relation.unique +'] RELATIONSHIP_TYPE [' + relation.relationshipType +']  AUTO_LOAD [' + relation.autoLoad + ']'
+                console.log(chalk.red('.....Missing - ' + baseMsg));
+                let msg = 'MISSING_RELATION.....' + baseMsg;
                 report.push(msg);
             }
         })
@@ -791,15 +999,48 @@ function checkRelations(appOneTable,appTwoTable) {
 }
 
 
+/*
+ Perform relations check of table
+ */
+
+function checkGeoRelations(appOneTable,appTwoTable) {
+    if (appOneTable.relations) {
+        console.log(chalk.yellow('Comparing all found relations for table [' + appOneTable.name + '] to relations of same table in Application 2 [' +_application2.appName + ']'));
+        appOneTable.geoRelations.forEach((geoRelation)=>{
+            process.stdout.write('.....Comparing Table [' + appOneTable.name + '] Geo Relation [' + geoRelation.name + '] to same in Application 2 [' + _application2.appName + ']');
+            let appTwoGeoRelations;
+            if (appTwoTable.geoRelations) {
+                appTwoGeoRelations = appTwoTable.geoRelations.filter((appTwoGeoRelation)=>{
+                    if (appTwoGeoRelation.name == geoRelation.name) {
+                        return appTwoGeoRelation;
+                    }
+                });
+            } else {
+                appTwoGeoRelations = [];
+            }
+
+            if (appTwoGeoRelations.length > 0) {
+                // Found Geo Relation
+                console.log(chalk.green('.....Matching'))
+            } else {
+                // Missing Geo Relation
+                let baseMsg = 'Table [' + appOneTable.name + '] Geo Relation [' + geoRelation.name + '] to same in Application 2 [' + _application2.appName + '] with the following details REQUIRED [' + geoRelation.required + '] UNIQUE [' + geoRelation.unique +'] RELATIONSHIP_TYPE [' + geoRelation.relationshipType +']  AUTO_LOAD [' + geoRelation.autoLoad + ']'
+                console.log(chalk.red('.....Missing - ' + baseMsg));
+                let msg = 'MISSING_GEO_RELATION.....' + baseMsg;
+                report.push(msg);
+            }
+        })
+    }
+}
 
 /*
 Compare and report relations differences between two applications
  */
-function compareRealtions(appOneTable,appTwoTable) {
+function compareRelations(appOneTable,appTwoTable) {
     async.series([
         (callback) =>{
         if (!appOneTable.relations && !appTwoTable.relations) {
-            console.log(chalk.white('......No Relations'))
+            console.log(chalk.yellow('.....No Relations'))
         } else {
             try{
                 if (appOneTable.relations.length === appOneTable.relations.length) {
@@ -811,14 +1052,64 @@ function compareRealtions(appOneTable,appTwoTable) {
                 callback(null);
             }
             catch (e){
+                console.log(chalk.red('Unable to check length of table relations'));
             }
-            console.log(chalk.red('Unable to check length of table relations'));
+
          }
+        }
+    ])
+}
+
+/*
+ Compare and report relations differences between two applications
+ */
+function compareGeoRelations(appOneTable,appTwoTable) {
+    async.series([
+        (callback) =>{
+            if (!appOneTable.geoRelations && !appTwoTable.geoRelations) {
+                console.log(chalk.yellow('.....No Geo Relations'))
+            } else {
+                try{
+                    if (appOneTable.geoRelations && appTwoTable.geoRelations) {
+                        if (appOneTable.geoRelations.length === appOneTable.geoRelations.length) {
+                            //Assuming we didn't have a deletion, or something added on wrong side.
+                            return checkGeoRelations(appOneTable,appTwoTable);
+                        } else {
+                            console.log('POSSIBLE_DELETION of Geo Relation in Application 1 ['+ _application1.appName + '], or addition of Geo Relation in Application 2 [' + _application2.appName);
+                        }
+                    } else {
+                        if (appOneTable.geoRelations) {
+                            console.log(chalk.green('.....Geo Relation found in Application 1'));
+                        } else {
+                            console.log(chalk.red('.....MISSING_GEO_RELATION was not found in Application 1'))
+                            appOneTable.geoRelations.forEach((geoRelation)=>{
+                                console.log(chalk.red('.....Relation [' + geoRelation + '] is missing from Application 1'))
+                            })
+                        }
+
+                        if (appTwoTable.geoRelations) {
+                            console.log(chalk.green('.....Geo Relation found in Application 2'));
+                        } else {
+                            console.log(chalk.red('.....MISSING_GEO_RELATION was not found in Application 2'))
+                            appTwoTable.geoRelations.forEach((geoRelation)=>{
+                                console.log(chalk.red('.....Relation [' + geoRelation + '] is missing from Application 2'))
+                            })
+                        }
+                    }
+                    callback(null);
+                }
+                catch (e){
+                    console.log(chalk.red('Unable to check length of table Geo Relations'));
+
+                }
+
+            }
         }
     ])
 
 
 }
+
 /*
 Write details of error report to issues_report.log
  */
